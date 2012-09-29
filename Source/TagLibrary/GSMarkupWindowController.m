@@ -37,6 +37,8 @@
 # include <GNUstep.h>
 #endif
 
+static void* getIvarPointer(id object, char const *name);
+
 @implementation GSMarkupWindowController
 
 /* Override the -init methods to store in _gsMarkupWindowNibName and
@@ -216,6 +218,7 @@
 		    externalNameTable: table
 		    withZone: [[self owner] zone]])
 	{
+          [self setYesToNibIsLoaded];
 	  [self setTopLevelObjects: topLevelObjects];
 	  return;
 	}
@@ -240,6 +243,7 @@
 		      externalNameTable: table
 		      withZone: [[self owner] zone]])
 	    {
+              [self setYesToNibIsLoaded];
 	      [self setTopLevelObjects: topLevelObjects];
 	      return;
 	    }
@@ -251,6 +255,7 @@
 			  externalNameTable: table
 			  withZone: [[self owner] zone]])
 		{
+                  [self setYesToNibIsLoaded];
 		  [self setTopLevelObjects: topLevelObjects];
 		  return;
 		}
@@ -259,4 +264,34 @@
     }
 }
 
+/*
+ * Problem: can't recive message windowControllerWillLoadNib: 
+ *      At: - (void) loadWindow 
+ *  Reason: add check code REV 30227 but GSMarkupWindowController's loadWindow not set nib_is_loaded
+ *    @see: http://svn.gna.org/viewcvs/gnustep/libs/gui/trunk/Source/NSWindowController.m?r1=30226&r2=30227&sortby=file&diff_format=h
+ */
+- (void) setYesToNibIsLoaded
+{
+  NSDebugLog(@"#setYesToNibIsLoaded");
+  struct ___wcFlags *flgsPtr;
+  flgsPtr = getIvarPointer(self, "_wcFlags");
+  if (flgsPtr == NULL)
+    {
+      NSLog(@"_wcFlags Can't access!");
+      return;
+    }
+  flgsPtr->nib_is_loaded = YES;
+}
+
 @end
+
+/****
+ * @see http://stackoverflow.com/questions/12265083/object-setinstancevariable-with-cgpoint
+ */
+static void* getIvarPointer(id object, char const *name)
+{
+  Ivar ivar = class_getInstanceVariable(object_getClass(object), name);
+  if (!ivar)
+     return 0;
+   return (__bridge void*)object + ivar_getOffset(ivar);
+}
